@@ -4,6 +4,7 @@ import { BlockNoteSummaryViewRef } from '@/components/AISummary/BlockNoteSummary
 import { toast } from 'sonner';
 import Analytics from '@/lib/analytics';
 import { invoke as invokeTauri } from '@tauri-apps/api/core';
+import { tagService } from '@/services/tagService';
 
 interface UseCopyOperationsProps {
   meeting: any;
@@ -56,6 +57,98 @@ export function useCopyOperations({
     }
   }, []);
 
+  const getSummaryMarkdown = useCallback(async (): Promise<string> => {
+    let summaryMarkdown = '';
+
+    if (blockNoteSummaryRef.current?.getMarkdown) {
+      summaryMarkdown = await blockNoteSummaryRef.current.getMarkdown();
+    }
+
+    if (!summaryMarkdown && aiSummary && 'markdown' in aiSummary) {
+      summaryMarkdown = (aiSummary as any).markdown || '';
+    }
+
+    if (!summaryMarkdown && aiSummary) {
+      const sections = Object.entries(aiSummary)
+        .filter(([key]) => {
+          return key !== 'markdown' && key !== 'summary_json' && key !== '_section_order' && key !== 'MeetingName';
+        })
+        .map(([, section]) => {
+          if (section && typeof section === 'object' && 'title' in section && 'blocks' in section) {
+            const sectionTitle = `## ${section.title}\n\n`;
+            const sectionContent = section.blocks
+              .map((block: any) => `- ${block.content}`)
+              .join('\n');
+            return sectionTitle + sectionContent;
+          }
+          return '';
+        })
+        .filter(s => s.trim())
+        .join('\n\n');
+      summaryMarkdown = sections;
+    }
+
+    return summaryMarkdown;
+  }, [aiSummary, blockNoteSummaryRef]);
+
+  const buildSummaryMarkdownDocument = useCallback(async (exportedOnLabel: string): Promise<string | null> => {
+    const summaryMarkdown = await getSummaryMarkdown();
+
+    if (!summaryMarkdown.trim()) {
+      return null;
+    }
+
+    const tags = await tagService.getMeetingTags(meeting.id);
+    const tagNames = tags.map(tag => tag.name);
+    const escapedTitle = String(meetingTitle || meeting.title || 'Untitled Meeting').replace(/"/g, '\\"');
+    const meetingDate = new Date(meeting.created_at);
+
+    const frontmatter = [
+      '---',
+      `title: "${escapedTitle}"`,
+      `meeting_id: "${meeting.id}"`,
+      `date: "${meetingDate.toISOString()}"`,
+      `tags: [${tagNames.map(tag => `"${tag.replace(/"/g, '\\"')}"`).join(', ')}]`,
+      tagNames[0] ? `upnote_notebook_hint: "${tagNames[0].replace(/"/g, '\\"')}"` : 'upnote_notebook_hint: ""',
+      'source: "Meetily"',
+      '---',
+      '',
+    ].join('\n');
+
+    const header = `# Meeting Summary: ${meetingTitle}\n\n`;
+    const metadata = `**Meeting ID:** ${meeting.id}\n**Date:** ${meetingDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })}\n${tagNames.length ? `**Tags:** ${tagNames.join(', ')}\n` : ''}**${exportedOnLabel}:** ${new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })}\n\n---\n\n`;
+
+    return frontmatter + header + metadata + summaryMarkdown;
+  }, [getSummaryMarkdown, meeting, meetingTitle]);
+
+  const getExportPath = useCallback(async (): Promise<string> => {
+    const safeTitle = String(meetingTitle || meeting.title || meeting.id || 'meeting-summary')
+      .replace(/[<>:"/\\|?*\x00-\x1F]/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 120) || 'meeting-summary';
+    const fileName = `${safeTitle}.md`;
+
+    if (meeting.folder_path) {
+      return `${meeting.folder_path.replace(/\/$/, '')}/${fileName}`;
+    }
+
+    const { downloadDir, join } = await import('@tauri-apps/api/path');
+    return join(await downloadDir(), fileName);
+  }, [meeting, meetingTitle]);
+
   // Copy transcript to clipboard
   const handleCopyTranscript = useCallback(async () => {
     // CHANGE: Fetch ALL transcripts from database, not from pagination state
@@ -107,72 +200,16 @@ export function useCopyOperations({
   // Copy summary to clipboard
   const handleCopySummary = useCallback(async () => {
     try {
-      let summaryMarkdown = '';
-
       console.log('🔍 Copy Summary - Starting...');
 
-      // Try to get markdown from BlockNote editor first
-      if (blockNoteSummaryRef.current?.getMarkdown) {
-        console.log('📝 Trying to get markdown from ref...');
-        summaryMarkdown = await blockNoteSummaryRef.current.getMarkdown();
-        console.log('📝 Got markdown from ref, length:', summaryMarkdown.length);
-      }
+      const fullMarkdown = await buildSummaryMarkdownDocument('Copied on');
 
-      // Fallback: Check if aiSummary has markdown property
-      if (!summaryMarkdown && aiSummary && 'markdown' in aiSummary) {
-        console.log('📝 Using markdown from aiSummary');
-        summaryMarkdown = (aiSummary as any).markdown || '';
-        console.log('📝 Markdown from aiSummary, length:', summaryMarkdown.length);
-      }
-
-      // Fallback: Check for legacy format
-      if (!summaryMarkdown && aiSummary) {
-        console.log('📝 Converting legacy format to markdown');
-        const sections = Object.entries(aiSummary)
-          .filter(([key]) => {
-            // Skip non-section keys
-            return key !== 'markdown' && key !== 'summary_json' && key !== '_section_order' && key !== 'MeetingName';
-          })
-          .map(([, section]) => {
-            if (section && typeof section === 'object' && 'title' in section && 'blocks' in section) {
-              const sectionTitle = `## ${section.title}\n\n`;
-              const sectionContent = section.blocks
-                .map((block: any) => `- ${block.content}`)
-                .join('\n');
-              return sectionTitle + sectionContent;
-            }
-            return '';
-          })
-          .filter(s => s.trim())
-          .join('\n\n');
-        summaryMarkdown = sections;
-        console.log('📝 Converted legacy format, length:', summaryMarkdown.length);
-      }
-
-      // If still no summary content, show message
-      if (!summaryMarkdown.trim()) {
+      if (!fullMarkdown) {
         console.error('❌ No summary content available to copy');
         toast.error('No summary content available to copy');
         return;
       }
 
-      // Build metadata header
-      const header = `# Meeting Summary: ${meetingTitle}\n\n`;
-      const metadata = `**Meeting ID:** ${meeting.id}\n**Date:** ${new Date(meeting.created_at).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })}\n**Copied on:** ${new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })}\n\n---\n\n`;
-
-      const fullMarkdown = header + metadata + summaryMarkdown;
       await navigator.clipboard.writeText(fullMarkdown);
 
       console.log('✅ Successfully copied to clipboard!');
@@ -187,10 +224,37 @@ export function useCopyOperations({
       console.error('❌ Failed to copy summary:', error);
       toast.error("Failed to copy summary");
     }
-  }, [aiSummary, meetingTitle, meeting, blockNoteSummaryRef]);
+  }, [aiSummary, meeting, buildSummaryMarkdownDocument]);
+
+  const handleExportSummaryMarkdown = useCallback(async () => {
+    try {
+      const fullMarkdown = await buildSummaryMarkdownDocument('Exported on');
+
+      if (!fullMarkdown) {
+        toast.error('No summary content available to export');
+        return;
+      }
+
+      const filePath = await getExportPath();
+      await invokeTauri('save_transcript', {
+        filePath,
+        content: fullMarkdown,
+      });
+
+      toast.success('Markdown note exported', {
+        description: filePath,
+      });
+
+      await Analytics.trackButtonClick('export_summary_markdown', 'meeting_details');
+    } catch (error) {
+      console.error('❌ Failed to export summary markdown:', error);
+      toast.error('Failed to export markdown note');
+    }
+  }, [buildSummaryMarkdownDocument, getExportPath, meeting.id]);
 
   return {
     handleCopyTranscript,
     handleCopySummary,
+    handleExportSummaryMarkdown,
   };
 }
