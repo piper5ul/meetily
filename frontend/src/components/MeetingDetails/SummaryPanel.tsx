@@ -21,6 +21,7 @@ import {
   saveMeetingSummaryLanguage,
   SummaryLanguageStorage,
 } from '@/lib/summary-language-preferences';
+import { MeetingTagsButton } from '@/components/MeetingTags/MeetingTagsButton';
 
 interface SummaryPanelProps {
   meeting: {
@@ -302,6 +303,10 @@ export function SummaryPanel({
                 onOpenFolder={onOpenFolder}
                 hasSummary={!!aiSummary}
               />
+            </div>
+
+            <div className="flex-shrink-0">
+              <MeetingTagsButton meetingId={meeting.id} />
             </div>
           </div>
         )}

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Analytics from '@/lib/analytics';
 import { invoke } from '@tauri-apps/api/core';
 import { useRecordingState } from '@/contexts/RecordingStateContext';
+import { MeetingTag, tagService } from '@/services/tagService';
 
 
 interface SidebarItem {
@@ -35,6 +36,10 @@ interface SidebarContextType {
   toggleCollapse: () => void;
   meetings: CurrentMeeting[];
   setMeetings: (meetings: CurrentMeeting[]) => void;
+  tags: MeetingTag[];
+  selectedTagId: string | null;
+  setSelectedTagId: (tagId: string | null) => void;
+  refetchTags: () => Promise<void>;
   isMeetingActive: boolean;
   setIsMeetingActive: (active: boolean) => void;
   handleRecordingToggle: () => void;
@@ -68,6 +73,8 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [currentMeeting, setCurrentMeeting] = useState<CurrentMeeting | null>({ id: 'intro-call', title: '+ New Call' });
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [meetings, setMeetings] = useState<CurrentMeeting[]>([]);
+  const [tags, setTags] = useState<MeetingTag[]>([]);
+  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [sidebarItems, setSidebarItems] = useState<SidebarItem[]>([]);
   const [isMeetingActive, setIsMeetingActive] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -86,7 +93,9 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const fetchMeetings = React.useCallback(async () => {
     if (serverAddress) {
       try {
-        const meetings = await invoke('api_get_meetings') as Array<{ id: string, title: string }>;
+        const meetings = selectedTagId
+          ? await tagService.getMeetingsForTag(selectedTagId)
+          : await invoke('api_get_meetings') as Array<{ id: string, title: string }>;
         const transformedMeetings = meetings.map((meeting: any) => ({
           id: meeting.id,
           title: meeting.title
@@ -99,11 +108,40 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
         Analytics.trackBackendConnection(false, error instanceof Error ? error.message : 'Unknown error');
       }
     }
-  }, [serverAddress]);
+  }, [serverAddress, selectedTagId]);
+
+  const fetchTags = React.useCallback(async () => {
+    if (!serverAddress) return;
+
+    try {
+      const nextTags = await tagService.listTags();
+      setTags(nextTags);
+      if (selectedTagId && !nextTags.some((tag) => tag.id === selectedTagId)) {
+        setSelectedTagId(null);
+      }
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+      setTags([]);
+    }
+  }, [serverAddress, selectedTagId]);
 
   useEffect(() => {
     fetchMeetings();
   }, [serverAddress, fetchMeetings]);
+
+  useEffect(() => {
+    fetchTags();
+  }, [serverAddress, fetchTags]);
+
+  useEffect(() => {
+    const onTagsUpdated = () => {
+      void fetchTags();
+      void fetchMeetings();
+    };
+
+    window.addEventListener('meetily-tags-updated', onTagsUpdated);
+    return () => window.removeEventListener('meetily-tags-updated', onTagsUpdated);
+  }, [fetchTags, fetchMeetings]);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -298,6 +336,10 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
       toggleCollapse,
       meetings,
       setMeetings,
+      tags,
+      selectedTagId,
+      setSelectedTagId,
+      refetchTags: fetchTags,
       isMeetingActive,
       setIsMeetingActive,
       handleRecordingToggle,

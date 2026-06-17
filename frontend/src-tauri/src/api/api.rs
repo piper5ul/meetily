@@ -8,7 +8,7 @@ use crate::{
     database::{
         models::MeetingModel,
         repositories::{
-            meeting::MeetingsRepository, setting::SettingsRepository,
+            meeting::MeetingsRepository, setting::SettingsRepository, tags::TagsRepository,
             transcript::TranscriptsRepository,
         },
     },
@@ -30,6 +30,14 @@ pub struct ApiResponse<T> {
 pub struct Meeting {
     pub id: String,
     pub title: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Tag {
+    pub id: String,
+    pub name: String,
+    #[serde(rename = "meetingCount")]
+    pub meeting_count: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -162,6 +170,14 @@ pub struct PaginatedTranscriptsResponse {
 pub struct SaveMeetingTitleRequest {
     pub meeting_id: String,
     pub title: String,
+}
+
+fn tag_from_model(tag: crate::database::models::TagModel) -> Tag {
+    Tag {
+        id: tag.id,
+        name: tag.name,
+        meeting_count: tag.meeting_count,
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -350,6 +366,94 @@ pub async fn api_get_meetings<R: Runtime>(
             Err(e.to_string())
         }
     }
+}
+
+#[tauri::command]
+pub async fn api_list_tags<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<Tag>, String> {
+    let pool = state.db_manager.pool();
+    TagsRepository::list_tags(pool)
+        .await
+        .map(|tags| tags.into_iter().map(tag_from_model).collect())
+        .map_err(|e| {
+            log_error!("Error listing tags: {}", e);
+            format!("Failed to list tags: {}", e)
+        })
+}
+
+#[tauri::command]
+pub async fn api_create_tag<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    name: String,
+) -> Result<Tag, String> {
+    let pool = state.db_manager.pool();
+    TagsRepository::create_tag(pool, &name)
+        .await
+        .map(tag_from_model)
+        .map_err(|e| {
+            log_error!("Error creating tag '{}': {}", name, e);
+            format!("Failed to create tag: {}", e)
+        })
+}
+
+#[tauri::command]
+pub async fn api_get_meeting_tags<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+) -> Result<Vec<Tag>, String> {
+    let pool = state.db_manager.pool();
+    TagsRepository::get_meeting_tags(pool, &meeting_id)
+        .await
+        .map(|tags| tags.into_iter().map(tag_from_model).collect())
+        .map_err(|e| {
+            log_error!("Error getting tags for meeting {}: {}", meeting_id, e);
+            format!("Failed to get meeting tags: {}", e)
+        })
+}
+
+#[tauri::command]
+pub async fn api_set_meeting_tags<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+    tag_ids: Vec<String>,
+) -> Result<Vec<Tag>, String> {
+    let pool = state.db_manager.pool();
+    TagsRepository::set_meeting_tags(pool, &meeting_id, tag_ids)
+        .await
+        .map(|tags| tags.into_iter().map(tag_from_model).collect())
+        .map_err(|e| {
+            log_error!("Error setting tags for meeting {}: {}", meeting_id, e);
+            format!("Failed to save meeting tags: {}", e)
+        })
+}
+
+#[tauri::command]
+pub async fn api_get_meetings_for_tag<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    tag_id: String,
+) -> Result<Vec<Meeting>, String> {
+    let pool = state.db_manager.pool();
+    TagsRepository::get_meetings_for_tag(pool, &tag_id)
+        .await
+        .map(|meetings| {
+            meetings
+                .into_iter()
+                .map(|m| Meeting {
+                    id: m.id,
+                    title: m.title,
+                })
+                .collect()
+        })
+        .map_err(|e| {
+            log_error!("Error filtering meetings for tag {}: {}", tag_id, e);
+            format!("Failed to filter meetings by tag: {}", e)
+        })
 }
 
 #[tauri::command]
