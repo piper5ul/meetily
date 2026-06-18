@@ -5,6 +5,8 @@ import { Check, Loader2, RefreshCw, Send, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ActionTooltip } from '@/components/ui/action-tooltip';
+import { ConfirmActionDialog } from '@/components/ui/confirm-action-dialog';
 import { integrationService, UpNoteSyncItem } from '@/services/integrationService';
 import Analytics from '@/lib/analytics';
 
@@ -41,6 +43,8 @@ function syncMessage(item: UpNoteSyncItem): { title: string; description: string
 
 export function UpNoteSyncButton({ meetingId, hasSummary, compact = false }: UpNoteSyncButtonProps) {
   const [open, setOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingTarget, setPendingTarget] = useState<{ notebook?: string; label: string } | null>(null);
   const [notebooks, setNotebooks] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -81,6 +85,8 @@ export function UpNoteSyncButton({ meetingId, hasSummary, compact = false }: UpN
       }
       await Analytics.trackButtonClick('sync_upnote', 'meeting_details');
       setOpen(false);
+      setConfirmOpen(false);
+      setPendingTarget(null);
     } catch (error) {
       console.error('Failed to sync meeting to UpNote:', error);
       toast.error('Failed to sync to UpNote', { description: String(error) });
@@ -89,59 +95,82 @@ export function UpNoteSyncButton({ meetingId, hasSummary, compact = false }: UpN
     }
   };
 
+  const requestSync = (target: { notebook?: string; label: string }) => {
+    setPendingTarget(target);
+    setConfirmOpen(true);
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          title="Sync to UpNote"
-          disabled={!hasSummary || isSyncing}
-          className={compact ? "w-full justify-start cursor-pointer" : "cursor-pointer"}
-        >
-          {isSyncing ? <Loader2 className="animate-spin" /> : <Send />}
-          <span className={compact ? "" : "hidden lg:inline"}>UpNote</span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-72 p-2" align="end">
-        <div className="px-2 py-1.5 text-xs font-semibold text-gray-500">Sync to UpNote</div>
-        <button
-          type="button"
-          onClick={() => sync()}
-          disabled={isSyncing}
-          className="w-full flex items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-gray-100 disabled:opacity-50"
-        >
-          <RefreshCw className="h-4 w-4 text-blue-600" />
-          <span className="flex-1">Auto route by tag</span>
-        </button>
-        <div className="my-1 h-px bg-gray-100" />
-        {isLoading ? (
-          <div className="flex items-center gap-2 px-2 py-3 text-sm text-gray-500">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading notebooks
-          </div>
-        ) : notebooks.length > 0 ? (
-          <div className="max-h-56 overflow-y-auto">
-            {notebooks.map((notebook) => (
-              <button
-                key={notebook}
-                type="button"
-                onClick={() => sync(notebook)}
-                disabled={isSyncing}
-                className="w-full flex items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-gray-100 disabled:opacity-50"
-              >
-                <Check className="h-4 w-4 text-gray-400" />
-                <span className="flex-1 truncate">{notebook}</span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="flex items-start gap-2 px-2 py-3 text-sm text-gray-500">
-            <TriangleAlert className="mt-0.5 h-4 w-4" />
-            <span>No UpNote notebooks found. Open UpNote backup once, then try again.</span>
-          </div>
-        )}
-      </PopoverContent>
-    </Popover>
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <ActionTooltip label="Sync this meeting to UpNote">
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!hasSummary || isSyncing}
+              className={compact ? "w-full justify-start cursor-pointer" : "cursor-pointer"}
+            >
+              {isSyncing ? <Loader2 className="animate-spin" /> : <Send />}
+              <span className={compact ? "" : "hidden lg:inline"}>UpNote</span>
+            </Button>
+          </PopoverTrigger>
+        </ActionTooltip>
+        <PopoverContent className="w-72 p-2" align="end">
+          <div className="px-2 py-1.5 text-xs font-semibold text-gray-500">Sync to UpNote</div>
+          <button
+            type="button"
+            onClick={() => requestSync({ label: 'Auto route by tag' })}
+            disabled={isSyncing}
+            className="w-full flex items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-gray-100 disabled:opacity-50"
+          >
+            <RefreshCw className="h-4 w-4 text-blue-600" />
+            <span className="flex-1">Auto route by tag</span>
+          </button>
+          <div className="my-1 h-px bg-gray-100" />
+          {isLoading ? (
+            <div className="flex items-center gap-2 px-2 py-3 text-sm text-gray-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading notebooks
+            </div>
+          ) : notebooks.length > 0 ? (
+            <div className="max-h-56 overflow-y-auto">
+              {notebooks.map((notebook) => (
+                <button
+                  key={notebook}
+                  type="button"
+                  onClick={() => requestSync({ notebook, label: notebook })}
+                  disabled={isSyncing}
+                  className="w-full flex items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-gray-100 disabled:opacity-50"
+                >
+                  <Check className="h-4 w-4 text-gray-400" />
+                  <span className="flex-1 truncate">{notebook}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-start gap-2 px-2 py-3 text-sm text-gray-500">
+              <TriangleAlert className="mt-0.5 h-4 w-4" />
+              <span>No UpNote notebooks found. Open UpNote backup once, then try again.</span>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+
+      <ConfirmActionDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Sync this meeting to UpNote?"
+        description={
+          pendingTarget?.notebook
+            ? `This will create a new UpNote note in "${pendingTarget.label}".`
+            : "Meetily will choose the UpNote notebook from tags, folder names, or routing rules."
+        }
+        details="If this meeting was already synced, Meetily will skip it rather than create a duplicate."
+        confirmLabel="Sync"
+        isPending={isSyncing}
+        onConfirm={() => sync(pendingTarget?.notebook)}
+      />
+    </>
   );
 }

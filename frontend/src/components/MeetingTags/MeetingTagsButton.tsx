@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, Tag as TagIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MeetingTag, tagService } from "@/services/tagService";
 import { TagPickerPopover } from "./TagPickerPopover";
@@ -48,19 +49,20 @@ export function MeetingTagsButton({ meetingId, compact = false }: MeetingTagsBut
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          title="Add or remove meeting tags"
-          aria-label="Manage meeting tags"
-          className={compact ? "w-full justify-start" : undefined}
-        >
-          <TagIcon size={18} />
-          <span className={compact ? "max-w-40 truncate" : "hidden lg:inline max-w-32 truncate"}>{label}</span>
-          <ChevronDown size={14} className={compact ? "ml-auto text-gray-400" : "text-gray-400"} />
-        </Button>
-      </PopoverTrigger>
+      <ActionTooltip label="Add or remove meeting tags">
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="Manage meeting tags"
+            className={compact ? "w-full justify-start" : undefined}
+          >
+            <TagIcon size={18} />
+            <span className={compact ? "max-w-40 truncate" : "hidden lg:inline max-w-32 truncate"}>{label}</span>
+            <ChevronDown size={14} className={compact ? "ml-auto text-gray-400" : "text-gray-400"} />
+          </Button>
+        </PopoverTrigger>
+      </ActionTooltip>
       <PopoverContent align={compact ? "end" : "start"} className="w-auto p-0 border-0 shadow-none bg-transparent">
         <TagPickerPopover meetingId={meetingId} onClose={() => setOpen(false)} />
       </PopoverContent>

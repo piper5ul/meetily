@@ -10,6 +10,7 @@ import {
 import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
+import { ActionTooltip } from '@/components/ui/action-tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -246,65 +247,70 @@ export function SummaryGeneratorButtonGroup({
     <ButtonGroup>
       {/* Generate Summary or Stop button */}
       {isGenerating ? (
-        <Button
-          variant="outline"
-          size="sm"
-          className="bg-gradient-to-r from-red-50 to-orange-50 hover:from-red-100 hover:to-orange-100 border-red-200 xl:px-4"
-          onClick={() => {
-            Analytics.trackButtonClick('stop_summary_generation', 'meeting_details');
-            onStopGeneration();
-          }}
-          title="Stop summary generation"
-        >
-          <Square className="xl:mr-2" size={18} fill="currentColor" />
-          <span className="hidden lg:inline xl:inline">Stop</span>
-        </Button>
+        <ActionTooltip label="Stop summary generation">
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-gradient-to-r from-red-50 to-orange-50 hover:from-red-100 hover:to-orange-100 border-red-200 xl:px-4"
+            onClick={() => {
+              Analytics.trackButtonClick('stop_summary_generation', 'meeting_details');
+              onStopGeneration();
+            }}
+          >
+            <Square className="xl:mr-2" size={18} fill="currentColor" />
+            <span className="hidden lg:inline xl:inline">Stop</span>
+          </Button>
+        </ActionTooltip>
       ) : (
-        <Button
-          variant="outline"
-          size="sm"
-          className="bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-blue-200 xl:px-4"
-          onClick={() => {
-            Analytics.trackButtonClick('generate_summary', 'meeting_details');
-            checkOllamaModelsAndGenerate();
-          }}
-          disabled={isCheckingModels || isModelConfigLoading}
-          title={
+        <ActionTooltip
+          label={
             isModelConfigLoading
-              ? 'Loading model configuration...'
+              ? 'Loading model configuration'
               : isCheckingModels
-                ? 'Checking models...'
-                : hasSummary ? 'Regenerate AI Summary' : 'Generate AI Summary'
+                ? 'Checking models'
+                : hasSummary ? 'Regenerate AI summary' : 'Generate AI summary'
           }
         >
-          {isCheckingModels || isModelConfigLoading ? (
-            <>
-              <Loader2 className="animate-spin xl:mr-2" size={18} />
-              <span className="hidden xl:inline">Processing...</span>
-            </>
-          ) : (
-            <>
-              <Sparkles className="xl:mr-2" size={18} />
-              <span className="hidden 2xl:inline">{hasSummary ? 'Regenerate Summary' : 'Generate Summary'}</span>
-            </>
-          )}
-        </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-blue-200 xl:px-4"
+            onClick={() => {
+              Analytics.trackButtonClick('generate_summary', 'meeting_details');
+              checkOllamaModelsAndGenerate();
+            }}
+            disabled={isCheckingModels || isModelConfigLoading}
+          >
+            {isCheckingModels || isModelConfigLoading ? (
+              <>
+                <Loader2 className="animate-spin xl:mr-2" size={18} />
+                <span className="hidden xl:inline">Processing...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="xl:mr-2" size={18} />
+                <span className="hidden 2xl:inline">{hasSummary ? 'Regenerate Summary' : 'Generate Summary'}</span>
+              </>
+            )}
+          </Button>
+        </ActionTooltip>
       )}
 
       {languageSlot}
 
       {/* Settings button */}
       <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
-        <DialogTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            title="Summary Settings"
-          >
-            <Settings />
-            <span className="hidden 2xl:inline">AI Model</span>
-          </Button>
-        </DialogTrigger>
+        <ActionTooltip label="Change AI model">
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+            >
+              <Settings />
+              <span className="hidden 2xl:inline">AI Model</span>
+            </Button>
+          </DialogTrigger>
+        </ActionTooltip>
         <DialogContent
           aria-describedby={undefined}
         >
@@ -327,16 +333,17 @@ export function SummaryGeneratorButtonGroup({
       {/* Template selector dropdown */}
       {availableTemplates.length > 0 && (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              title="Select summary template"
-            >
-              <FileText />
-              <span className="hidden 2xl:inline">Template</span>
-            </Button>
-          </DropdownMenuTrigger>
+          <ActionTooltip label="Choose summary template">
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+              >
+                <FileText />
+                <span className="hidden 2xl:inline">Template</span>
+              </Button>
+            </DropdownMenuTrigger>
+          </ActionTooltip>
           <DropdownMenuContent align="end">
             {availableTemplates.map((template) => (
               <DropdownMenuItem
