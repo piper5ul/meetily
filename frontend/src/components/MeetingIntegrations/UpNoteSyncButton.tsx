@@ -11,6 +11,7 @@ import Analytics from '@/lib/analytics';
 interface UpNoteSyncButtonProps {
   meetingId: string;
   hasSummary: boolean;
+  compact?: boolean;
 }
 
 function syncMessage(item: UpNoteSyncItem): { title: string; description: string } {
@@ -38,7 +39,7 @@ function syncMessage(item: UpNoteSyncItem): { title: string; description: string
   };
 }
 
-export function UpNoteSyncButton({ meetingId, hasSummary }: UpNoteSyncButtonProps) {
+export function UpNoteSyncButton({ meetingId, hasSummary, compact = false }: UpNoteSyncButtonProps) {
   const [open, setOpen] = useState(false);
   const [notebooks, setNotebooks] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -96,10 +97,10 @@ export function UpNoteSyncButton({ meetingId, hasSummary }: UpNoteSyncButtonProp
           size="sm"
           title="Sync to UpNote"
           disabled={!hasSummary || isSyncing}
-          className="cursor-pointer"
+          className={compact ? "w-full justify-start cursor-pointer" : "cursor-pointer"}
         >
           {isSyncing ? <Loader2 className="animate-spin" /> : <Send />}
-          <span className="hidden lg:inline">UpNote</span>
+          <span className={compact ? "" : "hidden lg:inline"}>UpNote</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-2" align="end">

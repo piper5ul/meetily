@@ -2,9 +2,9 @@
 
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
-import { Copy, Download, Save, Loader2, Search, FolderOpen } from 'lucide-react';
+import { Copy, Save, Loader2, Search } from 'lucide-react';
 import Analytics from '@/lib/analytics';
-import { UpNoteSyncButton } from '@/components/MeetingIntegrations/UpNoteSyncButton';
+import { SummaryMoreActions } from './SummaryMoreActions';
 
 interface SummaryUpdaterButtonGroupProps {
   meetingId: string;
@@ -72,23 +72,12 @@ export function SummaryUpdaterButtonGroup({
         <span className="hidden lg:inline">Copy</span>
       </Button>
 
-      {/* Export button */}
-      <Button
-        variant="outline"
-        size="sm"
-        title="Export Markdown"
-        onClick={() => {
-          Analytics.trackButtonClick('export_summary_markdown', 'meeting_details');
-          onExport();
-        }}
-        disabled={!hasSummary}
-        className="cursor-pointer"
-      >
-        <Download />
-        <span className="hidden lg:inline">Export</span>
-      </Button>
-
-      <UpNoteSyncButton meetingId={meetingId} hasSummary={hasSummary} />
+      <SummaryMoreActions
+        meetingId={meetingId}
+        hasSummary={hasSummary}
+        onExport={onExport}
+        onOpenFolder={onOpenFolder}
+      />
 
       {/* Find button */}
       {/* {onFind && (

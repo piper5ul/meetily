@@ -285,7 +285,7 @@ export function SummaryGeneratorButtonGroup({
           ) : (
             <>
               <Sparkles className="xl:mr-2" size={18} />
-              <span className="hidden lg:inline xl:inline">{hasSummary ? 'Regenerate Summary' : 'Generate Summary'}</span>
+              <span className="hidden 2xl:inline">{hasSummary ? 'Regenerate Summary' : 'Generate Summary'}</span>
             </>
           )}
         </Button>
@@ -302,7 +302,7 @@ export function SummaryGeneratorButtonGroup({
             title="Summary Settings"
           >
             <Settings />
-            <span className="hidden lg:inline">AI Model</span>
+            <span className="hidden 2xl:inline">AI Model</span>
           </Button>
         </DialogTrigger>
         <DialogContent
@@ -334,7 +334,7 @@ export function SummaryGeneratorButtonGroup({
               title="Select summary template"
             >
               <FileText />
-              <span className="hidden lg:inline">Template</span>
+              <span className="hidden 2xl:inline">Template</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

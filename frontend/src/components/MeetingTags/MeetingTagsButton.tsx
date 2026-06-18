@@ -9,9 +9,10 @@ import { TagPickerPopover } from "./TagPickerPopover";
 
 interface MeetingTagsButtonProps {
   meetingId: string;
+  compact?: boolean;
 }
 
-export function MeetingTagsButton({ meetingId }: MeetingTagsButtonProps) {
+export function MeetingTagsButton({ meetingId, compact = false }: MeetingTagsButtonProps) {
   const [open, setOpen] = useState(false);
   const [meetingTags, setMeetingTags] = useState<MeetingTag[]>([]);
 
@@ -53,13 +54,14 @@ export function MeetingTagsButton({ meetingId }: MeetingTagsButtonProps) {
           size="sm"
           title="Add or remove meeting tags"
           aria-label="Manage meeting tags"
+          className={compact ? "w-full justify-start" : undefined}
         >
           <TagIcon size={18} />
-          <span className="hidden lg:inline max-w-32 truncate">{label}</span>
-          <ChevronDown size={14} className="text-gray-400" />
+          <span className={compact ? "max-w-40 truncate" : "hidden lg:inline max-w-32 truncate"}>{label}</span>
+          <ChevronDown size={14} className={compact ? "ml-auto text-gray-400" : "text-gray-400"} />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-0 border-0 shadow-none bg-transparent">
+      <PopoverContent align={compact ? "end" : "start"} className="w-auto p-0 border-0 shadow-none bg-transparent">
         <TagPickerPopover meetingId={meetingId} onClose={() => setOpen(false)} />
       </PopoverContent>
     </Popover>
