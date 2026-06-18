@@ -268,9 +268,9 @@ export function SummaryPanel({
 
         {/* Button groups - only show when summary exists */}
         {aiSummary && !isSummaryLoading && (
-          <div className="flex w-full min-w-0 items-center justify-between gap-3 pt-0">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2 pt-0">
             {/* Left-aligned: Summary Generator Button Group */}
-            <div className="min-w-0 flex-shrink">
+            <div className="min-w-0 max-w-full overflow-x-auto">
               <SummaryGeneratorButtonGroup
                 modelConfig={modelConfig}
                 setModelConfig={setModelConfig}
@@ -291,7 +291,7 @@ export function SummaryPanel({
             </div>
 
             {/* Right-aligned: Summary Updater Button Group */}
-            <div className="flex-shrink-0">
+            <div className="ml-auto flex-shrink-0">
               <SummaryUpdaterButtonGroup
                 meetingId={meeting.id}
                 isSaving={isSaving}

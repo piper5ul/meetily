@@ -47,12 +47,12 @@ export function SummaryUpdaterButtonGroup({
           {isSaving ? (
             <>
               <Loader2 className="animate-spin" />
-              <span className="hidden lg:inline">Saving...</span>
+              <span className="hidden xl:inline">Saving...</span>
             </>
           ) : (
             <>
               <Save />
-              <span className="hidden lg:inline">Save</span>
+              <span className="hidden xl:inline">Save</span>
             </>
           )}
         </Button>
@@ -71,7 +71,7 @@ export function SummaryUpdaterButtonGroup({
           className="cursor-pointer"
         >
           <Copy />
-          <span className="hidden lg:inline">Copy</span>
+          <span className="hidden xl:inline">Copy</span>
         </Button>
       </ActionTooltip>
 
