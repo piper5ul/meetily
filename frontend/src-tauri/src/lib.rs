@@ -41,6 +41,7 @@ pub mod audio;
 pub mod config;
 pub mod console_utils;
 pub mod database;
+pub mod integrations;
 pub mod notifications;
 pub mod ollama;
 pub mod onboarding;
@@ -636,6 +637,8 @@ pub fn run() {
             api::api_get_meeting_tags,
             api::api_set_meeting_tags,
             api::api_get_meetings_for_tag,
+            integrations::upnote::api_list_upnote_notebooks,
+            integrations::upnote::api_sync_meeting_to_upnote,
             api::api_search_transcripts,
             api::api_get_profile,
             api::api_save_profile,

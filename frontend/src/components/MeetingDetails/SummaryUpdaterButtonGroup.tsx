@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Copy, Download, Save, Loader2, Search, FolderOpen } from 'lucide-react';
 import Analytics from '@/lib/analytics';
+import { UpNoteSyncButton } from '@/components/MeetingIntegrations/UpNoteSyncButton';
 
 interface SummaryUpdaterButtonGroupProps {
+  meetingId: string;
   isSaving: boolean;
   isDirty: boolean;
   onSave: () => Promise<void>;
@@ -17,6 +19,7 @@ interface SummaryUpdaterButtonGroupProps {
 }
 
 export function SummaryUpdaterButtonGroup({
+  meetingId,
   isSaving,
   isDirty,
   onSave,
@@ -84,6 +87,8 @@ export function SummaryUpdaterButtonGroup({
         <Download />
         <span className="hidden lg:inline">Export</span>
       </Button>
+
+      <UpNoteSyncButton meetingId={meetingId} hasSummary={hasSummary} />
 
       {/* Find button */}
       {/* {onFind && (

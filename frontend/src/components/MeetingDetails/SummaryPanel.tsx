@@ -294,6 +294,7 @@ export function SummaryPanel({
             {/* Right-aligned: Summary Updater Button Group */}
             <div className="flex-shrink-0">
               <SummaryUpdaterButtonGroup
+                meetingId={meeting.id}
                 isSaving={isSaving}
                 isDirty={isTitleDirty || (summaryRef.current?.isDirty || false)}
                 onSave={onSaveAll}
